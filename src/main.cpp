@@ -353,15 +353,21 @@ void onReceiveOssmState() {
   } else {
     lv_obj_clear_state(ui_HomeButtonM, LV_STATE_CHECKED);
   }
+
+  lv_slider_set_range(ui_homespeedslider, 0, known_ossm.maxspeed);
+  lv_slider_set_range(ui_homedepthslider, 0, known_ossm.maxdepth);
+  lv_slider_set_range(ui_homestrokeslider, 0, known_ossm.maxdepth);
 }
 
 void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
+#ifdef M5_MSG_DEBUG
   Serial.printf("Received %i: ", len);
   for (int i = 0; i < len; i++)
   {
       Serial.printf("%02X", *(incomingData + i));
   }
   Serial.printf("\n");
+#endif
 
   if(len < sizeof(m5_message_header_t)) {
     LogDebug("Received too short message");
@@ -398,17 +404,19 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
     case OSSM_BROADCAST_STATE:
     {
       ossm_broadcast_state_t* msg = (ossm_broadcast_state_t*)(incomingData + sizeof(m5_message_header_t));
+#ifdef M5_MSG_DEBUG
       Serial.print("Received state: ");
       print_ossm_state(&msg->state);
-      
-      known_ossm.state = msg->state;
+#endif
+
+      known_ossm = *msg;
+      onReceiveOssmState();
       ossm_connected = true;
       if(!first_connect) {
         first_connect = true;
         lv_label_set_text(ui_connect, "Connected");
         lv_scr_load_anim(ui_Home, LV_SCR_LOAD_ANIM_FADE_ON,20,0,false);
       }
-      onReceiveOssmState();
       break;
     }
     case CUM_BROADCAST_STATE:
@@ -463,12 +471,14 @@ bool _send_message(m5_message_type message_type, unsigned short target, uint8_t 
   header->target = target;
   memcpy(&buffer[sizeof(m5_message_header_t)], data, len);
 
+#ifdef M5_MSG_DEBUG
   Serial.printf("Sent %i: ", sizeof(buffer));
   for (int i = 0; i < sizeof(buffer); i++)
   {
       Serial.printf("%02X", buffer[i]);
   }
   Serial.printf("\n");
+#endif
 
   for(int i = 0; i < 3; i++) {
     esp_err_t result = esp_now_send(Broadcast_Address, (uint8_t *) &buffer, sizeof(buffer));
@@ -490,8 +500,10 @@ bool send_ossm_state() {
   if(!ossm_connected) return false;
   m5_set_ossm_state_t msg;
   msg.state = want_ossm_state;
+#ifdef M5_MSG_DEBUG
   Serial.print("Sent state: ");
   print_ossm_state(&msg.state);
+#endif
   return _send_message(M5_SET_OSSM_STATE, OSSM_ID, (uint8_t*) &msg, sizeof(msg));
 }
 

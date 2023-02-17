@@ -1,7 +1,8 @@
 #ifndef _OSSM_M5_MESSAGES
 #define _OSSM_M5_MESSAGES
 #include <Arduino.h>
-#define HEARTBEAT_INTERVAL 500
+#define HEARTBEAT_INTERVAL 200
+// #define M5_MSG_DEBUG
 
 #ifdef __cplusplus
 extern "C"
